@@ -1,4 +1,5 @@
 use std::{collections::HashMap, fmt, fs};
+use clap::{Parser};
 
 // valid pattern states
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -67,11 +68,21 @@ impl QueryPatternState {
     }
 }
 
-// application config
-struct Config {
+// command line arguments
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value_t = String::from("wordlist.txt"))]
     wordlist_path: String,
+
+    #[arg(short, long, default_value_t = String::from("words"))]
     solution: String,
-    pattern: String,
+
+    #[arg(short, long, required = true)]
+    pattern: Vec<String>,
+
+    #[arg(short, long, default_value_t = 1)]
+    verbose: i32,
 }
 
 // two approaches:
@@ -86,24 +97,12 @@ struct Config {
 // 
 // winner: 1 (yippee)
 fn main() {
-    let config: Config = Config {
-        wordlist_path: String::from("wordlist.txt"),
-        solution: String::from("ideal"),
-        pattern: String::from(
-            r#"
-            ??*??
-            ?XXX?
-            ???X?
-            ?X?X?
-            ???X?
-            GGGGG
-        "#,
-        ),
-    };
+    let args = Args::parse();
+    let search_pattern_string: String = args.pattern.join("\n");
 
     // load wordlist
     // filter to only include words with the correct length just in case, although it should always be 5
-    let wordlist: Vec<String> = match load_wordlist(&config.wordlist_path, config.solution.len()) {
+    let wordlist: Vec<String> = match load_wordlist(&args.wordlist_path, args.solution.len()) {
         Ok(words) => words,
         Err(e) => {
             eprintln!("Failed to load wordlist: {}.", e);
@@ -119,12 +118,12 @@ fn main() {
     // parse patterns of every word :)
     let mut pattern_map: HashMap<Vec<PatternState>, Vec<String>> = HashMap::new();
     for word in &wordlist {
-        let pattern: Vec<PatternState> = calculate_pattern(&word, &config.solution);
+        let pattern: Vec<PatternState> = calculate_pattern(&word, &args.solution);
         pattern_map.entry(pattern).or_default().push(word.clone());
     }
 
     // get solutions for each query pattern we want
-    let query_patterns: Vec<Vec<QueryPatternState>> = parse_query_pattern(&config.pattern);
+    let query_patterns: Vec<Vec<QueryPatternState>> = parse_query_pattern(&search_pattern_string);
     let mut possible: bool = true;
     for query in query_patterns {
         let patterns: Vec<Vec<PatternState>> = expand_query_pattern(&query);
