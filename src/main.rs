@@ -76,18 +76,23 @@ impl QueryPatternState {
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    /// Path to the wordlist to use
     #[arg(short, long, default_value_t = String::from("wordlist.txt"))]
     wordlist_path: String,
 
+    /// The solution word
     #[arg(short, long, default_value_t = String::from("words"))]
     solution: String,
 
+    /// The pattern to match (can be called multiple times to specify multiple patterns)
     #[arg(short, long, required = true)]
     pattern: Vec<String>,
 
+    /// The maximum number of words to print per pattern
     #[arg(short = 'l', long, default_value_t = 1)]
     print_length: usize,
 
+    /// Verbose mode (prints all words that match each pattern)
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
 }
