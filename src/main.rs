@@ -1,5 +1,5 @@
+use clap::Parser;
 use std::{collections::HashMap, fmt, fs};
-use clap::{Parser};
 
 // valid pattern states
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -63,7 +63,11 @@ impl QueryPatternState {
         match self {
             QueryPatternState::Base(state) => vec![*state],
             QueryPatternState::AnyValid => vec![PatternState::Green, PatternState::Yellow],
-            QueryPatternState::Any => vec![PatternState::Green, PatternState::Yellow, PatternState::Grey],
+            QueryPatternState::Any => vec![
+                PatternState::Green,
+                PatternState::Yellow,
+                PatternState::Grey,
+            ],
         }
     }
 }
@@ -81,8 +85,11 @@ struct Args {
     #[arg(short, long, required = true)]
     pattern: Vec<String>,
 
-    #[arg(short, long, default_value_t = 1)]
-    verbose: i32,
+    #[arg(short = 'l', long, default_value_t = 1)]
+    print_length: usize,
+
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
 }
 
 // two approaches:
@@ -94,7 +101,7 @@ struct Args {
 //    then collect all words that match each query pattern
 //    - words must be processed multiple times (O(wq))
 //    + simpler access after all words have been processed (O(1))
-// 
+//
 // winner: 1 (yippee)
 fn main() {
     let args = Args::parse();
@@ -137,16 +144,31 @@ fn main() {
             }
         }
 
+        // verbose: print all patterns
+        if args.verbose {
+            println!(
+                "Possible solutions for pattern {}: ({} total)",
+                query_pattern_to_string(&query),
+                solutions.len()
+            );
+            for solution in &solutions {
+                println!("  {}", solution);
+            }
+            println!();
+            continue;
+        }
+
         if solutions.len() > 0 {
             println!(
                 "Possible solutions for pattern {}:",
                 query_pattern_to_string(&query)
             );
-            if let Some(first_solution) = solutions.first() {
-                println!("  {}", first_solution);
-                if solutions.len() > 1 {
-                    println!("  (and {} others)", solutions.len() - 1);
-                }
+            for solution in &solutions[0..args.print_length] {
+                println!("  {}", solution);
+            }
+
+            if solutions.len() > args.print_length {
+                println!("  (and {} others)", solutions.len() - args.print_length);
             }
         } else {
             println!(
@@ -199,9 +221,10 @@ fn expand_query_pattern(pattern: &Vec<QueryPatternState>) -> Vec<Vec<PatternStat
     // for each query state (G, Y, X, ?, *) in query pattern...
     for query_state in pattern {
         let possible_states: Vec<PatternState> = query_state.possible_states();
-        
+
         // ...extend results with each possible state
-        let mut new_results: Vec<Vec<PatternState>> = Vec::with_capacity(results.len() * possible_states.len());
+        let mut new_results: Vec<Vec<PatternState>> =
+            Vec::with_capacity(results.len() * possible_states.len());
         for result in &results {
             for possible_state in &possible_states {
                 let mut new_result = result.clone();
